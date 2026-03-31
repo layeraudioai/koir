@@ -8,43 +8,63 @@ cls
 if not exist mp3 mkdir mp3
 echo === MML Song Encoder Build System ===
 echo.
-echo Available songs:
-set "SONG_COUNT=0"
-for %%f in (mp3\*.mp3 midi\*.mid mml\*.mml songs\*.c) do (
-    echo   [!SONG_COUNT!] %%f
-    set "SONG_LIST[!SONG_COUNT!]=%%f"
-    set /a SONG_COUNT+=1
+
+if not "%~1"=="" (
+    set "SELECTED_FILE=%~1"
+) else (
+    echo Available songs:
+    set "SONG_COUNT=0"
+    for %%f in (mp3\*.mp3 midi\*.mid mml\*.mml songs\*.c) do (
+        echo   [!SONG_COUNT!] %%f
+        set "SONG_LIST[!SONG_COUNT!]=%%f"
+        set /a SONG_COUNT+=1
+    )
+    set /a MAX_SONG_IDX=%SONG_COUNT% - 1
+    set /p "s_choice=Select song [0-!MAX_SONG_IDX!] (default 0): "
+    if "!s_choice!"=="" set "s_choice=0"
+    for %%i in (!s_choice!) do set "SELECTED_FILE=!SONG_LIST[%%i]!"
 )
-set /a MAX_SONG_IDX=%SONG_COUNT% - 1
-set /p "s_choice=Select song [0-%MAX_SONG_IDX%] (default 0): "
-if "%s_choice%"=="" set "s_choice=0"
-set "SELECTED_FILE=!SONG_LIST[%s_choice%]!"
 
-echo Select Target Platform:
-echo   [0] linux
-echo   [1] windows
-echo   [2] nintendo
-set /p "p_choice=Select [0-2] (default 0): "
-if "%p_choice%"=="" set "p_choice=0"
-if "%p_choice%"=="0" set "PLATFORM=linux"
-if "%p_choice%"=="1" set "PLATFORM=windows"
-if "%p_choice%"=="2" set "PLATFORM=nintendo"
+set "PLATFORMS[0]=linux"
+set "PLATFORMS[1]=windows"
+set "PLATFORMS[2]=nintendo"
+if not "%~2"=="" (
+    for %%i in ("%~2") do set "PLATFORM=!PLATFORMS[%%~i]!"
+) else (
+    echo Select Target Platform:
+    echo   [0] linux
+    echo   [1] windows
+    echo   [2] nintendo
+    set /p "p_choice=Select [0-2] (default 0): "
+    if "!p_choice!"=="" set "p_choice=0"
+    for %%i in (!p_choice!) do set "PLATFORM=!PLATFORMS[%%i]!"
+)
 
-echo Select Target Architecture:
-echo   [0] amd64
-echo   [1] arm
-echo   [2] arm64
-set /p "a_choice=Select [0-2] (default 0): "
-if "%a_choice%"=="" set "a_choice=0"
-if "%a_choice%"=="0" set "ARCH=amd64"
-if "%a_choice%"=="1" set "ARCH=arm"
-if "%a_choice%"=="2" set "ARCH=arm64"
+set "ARCHS[0]=amd64"
+set "ARCHS[1]=arm"
+set "ARCHS[2]=arm64"
+if not "%~3"=="" (
+    for %%i in ("%~3") do set "ARCH=!ARCHS[%%~i]!"
+) else (
+    echo Select Target Architecture:
+    echo   [0] amd64
+    echo   [1] arm
+    echo   [2] arm64
+    set /p "a_choice=Select [0-2] (default 0): "
+    if "!a_choice!"=="" set "a_choice=0"
+    for %%i in (!a_choice!) do set "ARCH=!ARCHS[%%i]!"
+)
 
 echo Scanning for available audio libraries...
 
 REM Initialize available backends array
 set "AVAILABLE_COUNT=0"
+set "AVAILABLE_LIST="
+
+REM DUMMY is always available
 set "AVAILABLE[0]=DUMMY"
+set "AVAILABLE_LIST=!AVAILABLE_LIST! DUMMY"
+set /a AVAILABLE_COUNT=0
 
 REM Check for ALSA (not typically available on Windows)
 REM On Windows, we'll check for common audio backends
@@ -56,6 +76,7 @@ if %errorlevel% equ 0 (
     if %errorlevel% equ 0 (
         set /a AVAILABLE_COUNT+=1
         set "AVAILABLE[!AVAILABLE_COUNT!]=SDL3"
+        set "AVAILABLE_LIST=!AVAILABLE_LIST! SDL3"
     )
 )
 
@@ -66,6 +87,7 @@ if %errorlevel% equ 0 (
     if %errorlevel% equ 0 (
         set /a AVAILABLE_COUNT+=1
         set "AVAILABLE[!AVAILABLE_COUNT!]=SDL2"
+        set "AVAILABLE_LIST=!AVAILABLE_LIST! SDL2"
     )
 )
 
@@ -76,14 +98,22 @@ if %errorlevel% equ 0 (
     if %errorlevel% equ 0 (
         set /a AVAILABLE_COUNT+=1
         set "AVAILABLE[!AVAILABLE_COUNT!]=SDL"
+        set "AVAILABLE_LIST=!AVAILABLE_LIST! SDL"
     )
 )
 
 REM Windows Multimedia API is always available on Windows
 set /a AVAILABLE_COUNT+=1
 set "AVAILABLE[!AVAILABLE_COUNT!]=WINMM"
+set "AVAILABLE_LIST=!AVAILABLE_LIST! WINMM"
 
-REM Add DUMMY backend (already at index 0)
+if not "%~4"=="" (
+    for %%i in ("%~4") do set "SELECTED=!AVAILABLE[%%~i]!"
+    if "!SELECTED!"=="" (
+        echo Invalid backend index. Using DUMMY.
+        set "SELECTED=DUMMY"
+    )
+) else (
 
 if %AVAILABLE_COUNT% equ 0 (
     echo No audio backends detected.
@@ -97,19 +127,12 @@ if %AVAILABLE_COUNT% equ 0 (
     set /p "choice=Select backend [0-%AVAILABLE_COUNT%]: "
     if "!choice!"=="" set "choice=0"
     
-    REM Validate input
-    set "valid=0"
-    for /l %%i in (0,1,%AVAILABLE_COUNT%) do (
-        if "%%i"=="!choice!" (
-            set "valid=1"
-            set "SELECTED=!AVAILABLE[%%i]!"
-        )
-    )
-    
-    if !valid! equ 0 (
+    for %%i in (!choice!) do set "SELECTED=!AVAILABLE[%%i]!"
+    if "!SELECTED!"=="" (
         echo Invalid selection. Using default.
         set "SELECTED=!AVAILABLE[0]!"
     )
+)
 )
 
 REM --- Automation Phase ---
@@ -124,7 +147,7 @@ if /i "!FILE_EXT!"==".mp3" (
 
 if /i "!FILE_EXT!"==".mid" (
     echo Converting MIDI to MML...
-    python mid2mml.py "!SELECTED_FILE!"
+    python src\mid2mml.py "!SELECTED_FILE!"
     for %%A in ("!SELECTED_FILE!") do set "FILE_BASE=%%~nA"
     set "SELECTED_FILE=mml\!FILE_BASE!.mml"
     set "FILE_EXT=.mml"
@@ -132,7 +155,9 @@ if /i "!FILE_EXT!"==".mid" (
 
 if /i "!FILE_EXT!"==".mml" (
     echo Converting MML to C...
+    cd src
     make tools
+    cd ..
     for %%A in ("!SELECTED_FILE!") do set "FILE_BASE=%%~nA"
     set "SONG=songs\!FILE_BASE!_mml"
     if not exist songs mkdir songs
@@ -159,11 +184,12 @@ if /i "%SELECTED%"=="ALSA" set "backend_fn=alsa"
 if /i "%SELECTED%"=="DUMMY" set "backend_fn=dummy"
 
 for %%A in ("!SONG!") do set "SONG_NAME=%%~nA"
+set "SONG_NAME=!SONG_NAME: =_!"
 set "OUTFILE=%PLATFORM%_%ARCH%_%backend_fn%_!SONG_NAME!%EXT%"
 
 REM Handle compiler prefix (e.g. for cross-compiling)
-if not "%~2"=="" (
-    set "CC_CMD=%~2cc"
+if not "%~5"=="" (
+    set "CC_CMD=%~5cc"
 ) else (
     if "%PLATFORM%"=="nintendo" (
         if "%ARCH%"=="arm" (set "CC_CMD=arm-none-eabi-gcc") else (set "CC_CMD=aarch64-none-elf-gcc")
@@ -176,8 +202,10 @@ echo Building %OUTFILE% with %SELECTED% backend...
 echo --------------------------------------
 
 REM Call make with the selected parameters
-mkdir compiles
-make SONG="%SONG%" AUDIO_BACKEND="%SELECTED%" CC="%CC_CMD%" PLATFORM="%PLATFORM%" ARCH="%ARCH%" OUTFILE="compiles/%OUTFILE%"
+if not exist compiles mkdir compiles
+cd src
+make SONG="!SONG_NAME!" AUDIO_BACKEND="%SELECTED%" CC="%CC_CMD%" PLATFORM="%PLATFORM%" ARCH="%ARCH%" OUTFILE="../compiles/%OUTFILE%"
+cd ..
 
 echo --------------------------------------
 
