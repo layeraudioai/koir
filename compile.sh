@@ -3,7 +3,7 @@
 clear
 echo "=== MML Song Encoder Build System ==="
 
-if [[ "${1}" != " " ]]; 
+if [[ "${1}" != "" ]]; 
 then 
 SONGS=();
 idx=0;
@@ -27,7 +27,7 @@ s_idx=${s_idx:-0};
 SELECTED_FILE="${SONGS[$s_idx]}";
 fi;
 
-if [[ "${2}" != " " ]]; 
+if [[ "${2}" != "" ]]; 
 then 
 p_idx=${p_idx:-0}
 PLATFORMS=("linux" "windows" "nintendo")
@@ -43,7 +43,7 @@ PLATFORMS=("linux" "windows" "nintendo")
 PLATFORM=${PLATFORMS[$p_idx]}
 fi;
 
-if [[ "${3}" != " " ]]; 
+if [[ "${3}" != "" ]]; 
 then
 a_idx=${a_idx:-0}
 ARCHS=("amd64" "arm" "arm64")
@@ -59,7 +59,7 @@ ARCHS=("amd64" "arm" "arm64")
 ARCH=${ARCHS[$a_idx]}
 fi;
 
-if [[ "${4}" != " " ]]; 
+if [[ "${4}" != "" ]]; 
 then 
 echo "Scanning for available audio libraries..."
 AVAILABLE=()
