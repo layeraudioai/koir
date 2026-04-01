@@ -43,15 +43,17 @@ $(OUTFILE): ../songs/$(SONG).c mmlplay.c
 endif
 
 # Tools
-tools: mml2c.c
+tools: mml2c.c mid2mml.c mp32mid.c
 	$(CC) -O2 -o ../mml2c mml2c.c
+	$(CC) -O2 -o ../mid2mml mid2mml.c -lm
+	$(CC) -O2 -o ../mp32mid mp32mid.c -lmpg123 -lm
 
 # Target for building the standalone player utility
 player: mmlplay.c
 	$(CC) $(CFLAGS) -DSTANDALONE_PLAYER -o ../player mmlplay.c $(LDFLAGS)
 
 clean:
-	rm -f ../compiles/*.exe ../compiles/*.nro ../compiles/*.cia ../compiles/*.nsp ../compiles/*.elf ../mml2c
-	rm -f ../compiles/linux_* ../compiles/windows_* ../compiles/nintendo_* ../compiles/player ../compiles/converted_song.c
+	rm -f ../compiles/*.exe ../compiles/*.nro ../compiles/*.cia ../compiles/*.nsp ../compiles/*.elf ../mml2c ../mp32mid ../mid2mml
+	rm -f ../compiles/player ../compiles/converted_song.c
 
 .PHONY: all clean player
