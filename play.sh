@@ -1,3 +1,6 @@
+echo "YOU are a fool!"
+read -n 1
+
 if [[ "${1}" != " " ]]; 
 then 
 SONGS=();
