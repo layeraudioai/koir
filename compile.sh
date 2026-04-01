@@ -2,6 +2,21 @@
 # Interactive Song Compiler
 clear
 echo "=== MML Song Encoder Build System ==="
+echo "---warning:pressing any key starts a clean/rebuild process---"
+
+read -n 1
+./cleanup.sh
+mkdir -p mp3
+mkdir -p midi
+mkdir -p mml
+mkdir -p songs
+mkdir -p compiles
+echo "cleaned"
+cd src
+make tools
+cd ..
+echo "tools built"
+clear
 
 if [[ "${1}" != "" ]]; 
 then 
@@ -111,7 +126,8 @@ if [[ "$SELECTED_FILE" == *.mp3 ]]; then
     newname="${newname//(/}"
     newname="${newname//)/}"
     cp "$SELECTED_FILE" "${newname}"
-    python mp32mid.py ${newname}
+    ./mp32mid "${newname}" "${newname//.*}.mid"
+    mv "${newname//.*}.mid" midi
     SELECTED_FILE="${newname//.*}.mid"
 fi
 if [[ "$SELECTED_FILE" == *.mid ]]; then
@@ -121,20 +137,15 @@ if [[ "$SELECTED_FILE" == *.mid ]]; then
     newname="${newname//(/}"
     newname="${newname//)/}"
     cp "$SELECTED_FILE" "${newname}"
-
-    python3 src/mid2mml.py "${newname}" || exit 1
     base=$(basename "${newname}" .mid)
+    ./mid2mml midi/"${base}.mid" || exit 1
     SELECTED_FILE="mml/${base}.mml"
+    mv "${base}.mml" "$SELECTED_FILE" 2>/dev/null
 fi
-
 if [[ "$SELECTED_FILE" == *.mml ]]; then
     echo "Converting MML to C..."
-    cd src
-    make tools
     base=$(basename "$SELECTED_FILE" .mml)
     SONG="songs/${base// /_}_mml"
-    mkdir -p ../songs
-    cd ..
     ./mml2c "$SELECTED_FILE" "${SONG// /_}.c" || exit 1
 else
     SONG="${SELECTED_FILE%.*}"
