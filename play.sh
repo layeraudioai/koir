@@ -22,4 +22,4 @@ s_idx=${s_idx:-0};
 SELECTED_FILE="${SONGS[$s_idx]}";
 fi;
 
-while ((./*_*_*_*"$1"* && clear)&); do clear; read -n 1 quit; if !(($((${quit})))); then break; fi; clear; done; clear;
+while ((compiles/*_*_*_*"$1"* && clear)&); do clear; read -n 1 quit; if !(($((${quit})))); then break; fi; clear; done; clear;
